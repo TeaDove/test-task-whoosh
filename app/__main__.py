@@ -61,7 +61,7 @@ def sort_worker(numbers: np.array, idx: int):
 
 def sort_():
     cpu_count = mp.cpu_count() - 1
-    cpu_count = 1
+    cpu_count = 2
     logger.info("Количество доступных ядер: {} ", cpu_count)
     logger.info("Количество доступной ОЗУ всего: {} МБ", MAX_RAM)
     """
