@@ -13,12 +13,15 @@ from tqdm import tqdm
 from .merger import merge_main
 
 # Максимальный размер доступной ОЗУ одновременно в МБ
-MAX_RAM = 1
+MAX_RAM = 100
 MAX_RAM_BYTE = MAX_RAM * 1024 * 1024
-NUMBERS_AMOUNT = 1_000_000
+NUMBERS_AMOUNT = 100_000_000
 
 
 def generate():
+    """
+    Генерация 1_000_000_000 телефонов в файл в формат .txt
+    """
     # TODO генерировать массив в зависимости от имеющейся озу
     open("numbers.txt", 'w')  # перезаписываем файл
     with open('numbers.txt', 'a') as f:
@@ -30,6 +33,9 @@ def generate():
 
 
 def preprocess():
+    """
+    Перевод выше сгенерированного файла в numpy.memmap(то есть отображения np.array в файле)
+    """
     array = np.zeros((NUMBERS_AMOUNT,), dtype='int32')
     with open('numbers.txt', 'r') as f:
         for jdx in tqdm(range(NUMBERS_AMOUNT)):
@@ -41,6 +47,9 @@ def preprocess():
 
 
 def generate_memmap():
+    """
+    Генерация меммапа, нужно для отладки, чтобы не генерировать каждый раз файл и не переводить в memmap
+    """
     fp = np.memmap('tmp/numbers.dat', 'int32', 'w+', shape=(NUMBERS_AMOUNT,))
     numbers_per_iter = int(NUMBERS_AMOUNT // 100)
     for idx in tqdm(np.arange(100)):
@@ -50,6 +59,11 @@ def generate_memmap():
 
 
 def sort_worker(numbers: np.array, idx: int):
+    """
+    Функция процесса первичной сортировки
+    :param numbers: сами числа для сортировки в формате np.array
+    :param idx: индекс сортируемой части чисел
+    """
     numbers.sort()
 
     fp = np.memmap(f'data/{idx}.dat', dtype='int32', mode='w+', shape=numbers.shape)
@@ -60,8 +74,10 @@ def sort_worker(numbers: np.array, idx: int):
 
 
 def sort_():
+    """
+    Главный метод сортировки
+    """
     cpu_count = mp.cpu_count() - 1
-    cpu_count = 2
     logger.info("Количество доступных ядер: {} ", cpu_count)
     logger.info("Количество доступной ОЗУ всего: {} МБ", MAX_RAM)
     """
@@ -98,6 +114,9 @@ def sort_():
 
 
 def main():
+    """
+    Обработка опций
+    """
     parser = argparse.ArgumentParser(description='тестовое задание для собеседования в whoosh')
     parser.add_argument('--generate', action="store_true", help='только генерирует файл на 1ккк номеров телефонов')
     parser.add_argument('--preprocess', action="store_true", help='только переводит файл телефонов из .txt в np.memmap')
