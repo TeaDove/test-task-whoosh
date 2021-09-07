@@ -1,5 +1,9 @@
 .idea
 **/numbers.txt
+tmp
+poetry.lock
+data
+data2
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

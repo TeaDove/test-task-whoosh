@@ -5,10 +5,15 @@ from typing import Tuple
 
 from loguru import logger
 import numpy as np
-from tqdm import tqdm
-
 
 def merger_worker(array_tuple1: Tuple[str, int], array_tuple2: Tuple[str, int], max_numbers: int, pqueue: mp.Queue):
+    """
+    Процесс слияния меммапов
+    :param array_tuple1: первый массив
+    :param array_tuple2: второй массив
+    :param max_numbers: максимальное количество номеров, что можно одновременно открыть
+    :param pqueue: очередь безопасная для мультипроцессинга
+    """
     filename1, filesize1 = array_tuple1
     filename2, filesize2 = array_tuple2
     filesize_out = filesize1 + filesize2
@@ -38,6 +43,11 @@ def merger_worker(array_tuple1: Tuple[str, int], array_tuple2: Tuple[str, int], 
         len_fp_out = len(fp_out)
 
     while file_offset_1 < filesize1 and file_offset_2 < filesize2:
+        """
+        Основной цикл сортировки, в нём проверяет какой элемент массивов меньше, он добавляется в новый массив
+        Если какой-то из массивов кончается, файл закрываеться, открывается новый и массив заполняется новыми 
+        элементами
+        """
         if fp1[idx1] > fp2[idx2]:
             fp_out[idx_out] = fp2[idx2]
             idx2 += 1
@@ -66,6 +76,9 @@ def merger_worker(array_tuple1: Tuple[str, int], array_tuple2: Tuple[str, int], 
             file_offset_2 += file_shape
 
     while idx1 < len_fp1 and idx2 < len_fp2:
+        """
+        Дозаполнение массива
+        """
         if fp1[idx1] > fp2[idx2]:
             fp_out[idx_out] = fp2[idx2]
             idx2 += 1
@@ -78,6 +91,9 @@ def merger_worker(array_tuple1: Tuple[str, int], array_tuple2: Tuple[str, int], 
             open_new_out()
 
     while file_offset_1 < filesize1 or idx1 < len_fp1:
+        """
+        Цикл дозаполнения из массива 1. (ниже для массива 2)
+        """
         if idx_out >= len_fp_out:
             open_new_out()
         if idx1 >= len_fp1:
@@ -134,6 +150,12 @@ def error_handler(exception: BaseException):
 
 
 def merge_main(max_ram_byte: int, cpu_count: int, pqueue: mp.Queue):
+    """
+    Управляющая функция
+    :param max_ram_byte: максимально кол-во памяти, что можно использовать одновременно в Байтах
+    :param cpu_count: количество одновременных процессов
+    :param pqueue: безопасная для мультипроцессинга очередь
+    """
     max_numbers_per_cpu = int(np.ceil((max_ram_byte - 312) / cpu_count / 4))
     max_numbers_per_cpu -= max_numbers_per_cpu % 4
 

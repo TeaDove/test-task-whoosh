@@ -13,9 +13,10 @@ from tqdm import tqdm
 from .merger import merge_main
 
 # Максимальный размер доступной ОЗУ одновременно в МБ
-MAX_RAM = 100
+MAX_RAM = 20
 MAX_RAM_BYTE = MAX_RAM * 1024 * 1024
-NUMBERS_AMOUNT = 100_000_000
+# Количество номеров. 1_000_000 сортируется за несколько секунд.
+NUMBERS_AMOUNT = 10_000_000
 
 
 def generate():
@@ -64,7 +65,7 @@ def sort_worker(numbers: np.array, idx: int):
     :param numbers: сами числа для сортировки в формате np.array
     :param idx: индекс сортируемой части чисел
     """
-    numbers.sort()
+    numbers.sort(kind='stable') # stable - под катом используется radix сорт, что быстра в данной задаче
 
     fp = np.memmap(f'data/{idx}.dat', dtype='int32', mode='w+', shape=numbers.shape)
     fp[:] = numbers[:]
@@ -81,7 +82,7 @@ def sort_():
     logger.info("Количество доступных ядер: {} ", cpu_count)
     logger.info("Количество доступной ОЗУ всего: {} МБ", MAX_RAM)
     """
-    1 телефон занимает 32 бита, 1 массив np.array - 104 + 4 * n (байт), (8*4 = 32) 
+    1 телефон занимает 32 бита, 1 массив np.array - 104 + 4 * n (байт). 104 на сам массив, 4 байта на 1 int32.  
     """
     phones_per_batch = int(np.ceil((MAX_RAM_BYTE - 104) / 4 / cpu_count))
     bathes_amount = int(np.ceil(NUMBERS_AMOUNT / phones_per_batch))
@@ -92,7 +93,6 @@ def sort_():
     mp_manager = mp.Manager()
     pqueue = mp_manager.Queue()
 
-    # bathes_amount = 10
     idx = 0
     for idx in range(bathes_amount-1):
         fp = np.memmap('tmp/numbers.dat', mode='c', dtype='int32', offset=4*idx*phones_per_batch,
