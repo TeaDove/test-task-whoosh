@@ -21,29 +21,25 @@ NUMBERS_AMOUNT = 10_000_000
 
 def generate():
     """
-    Генерация 1_000_000_000 телефонов в файл в формат .txt
+    Генерация NUMBERS_AMOUNT телефонов в файл в формат .txt
     """
     # TODO генерировать массив в зависимости от имеющейся озу
     open("numbers.txt", 'w')  # перезаписываем файл
     with open('numbers.txt', 'a') as f:
-        for idx in np.arange(1_000):
-            to_f = np.random.randint(0, 1_000_000_000, 1_000_000)
-            f.write('\n'.join(map(str, to_f)))
-            if idx % 50 == 0:
-                logger.info("Сгенерировано: {} из {}", (idx+1)*1_000_000, NUMBERS_AMOUNT)
+        for _ in tqdm(np.arange(NUMBERS_AMOUNT)):
+            to_f = np.random.randint(0, 1_000_000_000)
+            f.write(f"{to_f}\n")
+        f.write('\n')
 
 
 def preprocess():
     """
     Перевод выше сгенерированного файла в numpy.memmap(то есть отображения np.array в файле)
     """
-    array = np.zeros((NUMBERS_AMOUNT,), dtype='int32')
+    fp = np.memmap('tmp/numbers.dat', 'int32', 'write', shape=(NUMBERS_AMOUNT,))
     with open('numbers.txt', 'r') as f:
         for jdx in tqdm(range(NUMBERS_AMOUNT)):
-            array[jdx] = (int(f.readline()))
-
-    fp = np.memmap('tmp/numbers.dat', 'int32', 'w+', shape=(NUMBERS_AMOUNT,))
-    fp[:] = array[:]
+            fp[jdx] = int(f.readline())
     fp.flush()
 
 
