@@ -170,7 +170,7 @@ def merge_main(max_ram_byte: int, cpu_count: int, pqueue: mp.Queue):
     pool.close()
     pool.join()
 
-    logger.info("Сортировка завершена")
+    # logger.info("Сортировка завершена")
     fp_out_name = str(list(Path('data').iterdir())[0])
     fp = np.memmap(fp_out_name, 'int32', 'r')
-    logger.info("{}:\t{}\t{:,}\t{:,}\t{:,}\t{:,}", fp_out_name, fp, fp.min(), fp.max(), fp.shape[0], np.count_nonzero(fp))
+    # logger.info("{}:\t{}\t{:,}\t{:,}\t{:,}\t{:,}", fp_out_name, fp, fp.min(), fp.max(), fp.shape[0], np.count_nonzero(fp))

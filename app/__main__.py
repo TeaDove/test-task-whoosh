@@ -1,10 +1,8 @@
 import argparse
 import sys
 import multiprocessing as mp
-from pathlib import Path
-from typing import Tuple
-import os
-
+import time
+from datetime import timedelta
 
 from loguru import logger
 import numpy as np
@@ -24,23 +22,29 @@ def generate():
     Генерация NUMBERS_AMOUNT телефонов в файл в формат .txt
     """
     # TODO генерировать массив в зависимости от имеющейся озу
+    start = time.time()
     open("numbers.txt", 'w')  # перезаписываем файл
     with open('numbers.txt', 'a') as f:
         for _ in tqdm(np.arange(NUMBERS_AMOUNT)):
             to_f = np.random.randint(0, 1_000_000_000)
             f.write(f"{to_f}\n")
         f.write('\n')
+    all_time = timedelta(seconds=time.time() - start)
+    logger.warning("Затраты по времени на генерацию: {}", all_time)
 
 
 def preprocess():
     """
     Перевод выше сгенерированного файла в numpy.memmap(то есть отображения np.array в файле)
     """
+    start = time.time()
     fp = np.memmap('tmp/numbers.dat', 'int32', 'write', shape=(NUMBERS_AMOUNT,))
     with open('numbers.txt', 'r') as f:
         for jdx in tqdm(range(NUMBERS_AMOUNT)):
             fp[jdx] = int(f.readline())
     fp.flush()
+    all_time = timedelta(seconds=time.time() - start)
+    logger.warning("Затраты по времени на препроцессинг: {}", all_time)
 
 
 def generate_memmap():
@@ -85,6 +89,7 @@ def sort_():
     logger.info("Количество телефонов в одном батче: {}", phones_per_batch)
     logger.info("Количество батчей всего: {}", bathes_amount)
 
+    prime_sort_start = time.time()
     pool = mp.Pool(processes=cpu_count)
     mp_manager = mp.Manager()
     pqueue = mp_manager.Queue()
@@ -105,9 +110,16 @@ def sort_():
 
     pool.close()
     pool.join()
+    prime_sort_stop = time.time()
 
+    merge_start = time.time()
     merge_main(MAX_RAM_BYTE, cpu_count, pqueue)
-
+    merge_stop = time.time()
+    merge_time = timedelta(seconds=merge_stop - merge_start)
+    sort_time = timedelta(seconds=prime_sort_stop - prime_sort_start)
+    all_time = timedelta(seconds=merge_stop - prime_sort_start)
+    logger.warning("Затраты по времени на сортировку:")
+    logger.warning("Первичная сортировка: {}, слияние: {}, суммарно: {}",sort_time, merge_time, all_time)
 
 def main():
     """
@@ -133,6 +145,7 @@ def main():
         generate_memmap()
         sys.exit()
     generate()
+    preprocess()
     sort_()
     sys.exit()
 
