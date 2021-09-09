@@ -2,9 +2,11 @@ import os
 import multiprocessing as mp
 from pathlib import Path
 from typing import Tuple
+import time
 
 from loguru import logger
 import numpy as np
+
 
 def merger_worker(array_tuple1: Tuple[str, int], array_tuple2: Tuple[str, int], max_numbers: int, pqueue: mp.Queue):
     """
@@ -22,7 +24,9 @@ def merger_worker(array_tuple1: Tuple[str, int], array_tuple2: Tuple[str, int], 
     fp1 = np.memmap('data/' + filename1 + '.dat', dtype='int32', mode='r', shape=(max_numbers // 4, ))
     fp2 = np.memmap('data/' + filename2 + '.dat', dtype='int32', mode='r', shape=(max_numbers // 4, ))
 
-    fp_out = np.memmap("data/{}_{}.dat".format(filename1, filename2), dtype='int32', mode='w+',
+    # FIXME заменить генерацию имени на последовательную нумерацию, которая берётся из PQueue. 
+    filename_out = str(int(time.time() * 10e6))
+    fp_out = np.memmap("data/{}.dat".format(filename_out), dtype='int32', mode='w+',
                        shape=(max_numbers // 2, ))
     file_offset_1, file_offset_2, file_offset_out = fp1.shape[0], fp2.shape[0], fp_out.shape[0]
     len_fp1, len_fp2, len_fp_out = len(fp1), len(fp2), len(fp_out)
@@ -31,11 +35,11 @@ def merger_worker(array_tuple1: Tuple[str, int], array_tuple2: Tuple[str, int], 
         """
         Открывает новый memmap для out файла
         """
-        nonlocal fp_out, file_offset_out, idx_out, len_fp_out, filesize_out
+        nonlocal fp_out, file_offset_out, idx_out, len_fp_out, filesize_out, filename_out
         fp_out.flush()
         fp_shape = min(max_numbers // 2, (filesize_out - file_offset_out))
 
-        fp_out = np.memmap("data/{}_{}.dat".format(filename1, filename2), dtype='int32', mode='r+',
+        fp_out = np.memmap("data/{}.dat".format(filename_out), dtype='int32', mode='r+',
                            offset=(file_offset_out * 4),
                            shape=(fp_shape,))
         file_offset_out += fp_shape
@@ -131,14 +135,14 @@ def merger_worker(array_tuple1: Tuple[str, int], array_tuple2: Tuple[str, int], 
     os.remove('data/' + filename1 + '.dat')
     os.remove('data/' + filename2 + '.dat')
     # logger.info("{}\t{:,}\t{:,}\t{:,}", fp_out, fp_out.min(), fp_out.max(), fp_out.shape[0])
-    logger.info("{}_{} готово", filename1, filename2)
+    logger.info("{} готов", filename_out)
 
     if len(list(Path('data').iterdir())) <= 1:
         # Останавливаем все процессы, если больше сортировать нечего
         pqueue.put(("Stop", ))
         pqueue.put(("Stop", ))
     else:
-        pqueue.put((filename1 + "_" + filename2, filesize_out))
+        pqueue.put((filename_out, filesize_out))
 
 
 def error_handler(exception: BaseException):
@@ -164,13 +168,13 @@ def merge_main(max_ram_byte: int, cpu_count: int, pqueue: mp.Queue):
         f1, f2 = pqueue.get(block=True), pqueue.get(block=True)
         if f1[0] == "Stop":
             break
-        logger.info("{}_{} стартовал, файлов для сортировки: {}", f1[0], f2[0], len(list(Path('data').iterdir())))
+        logger.info("{} {} стартовали, файлов для сортировки: {}", f1[0], f2[0], len(list(Path('data').iterdir())))
         pool.apply_async(merger_worker, (f1, f2, max_numbers_per_cpu, pqueue), error_callback=error_handler)
 
     pool.close()
     pool.join()
 
     # logger.info("Сортировка завершена")
-    fp_out_name = str(list(Path('data').iterdir())[0])
-    fp = np.memmap(fp_out_name, 'int32', 'r')
+    # fp_out_name = str(list(Path('data').iterdir())[0])
+    # fp = np.memmap(fp_out_name, 'int32', 'r')
     # logger.info("{}:\t{}\t{:,}\t{:,}\t{:,}\t{:,}", fp_out_name, fp, fp.min(), fp.max(), fp.shape[0], np.count_nonzero(fp))

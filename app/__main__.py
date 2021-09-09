@@ -11,10 +11,10 @@ from tqdm import tqdm
 from .merger import merge_main
 
 # Максимальный размер доступной ОЗУ одновременно в МБ
-MAX_RAM = 20
+MAX_RAM = 256
 MAX_RAM_BYTE = MAX_RAM * 1024 * 1024
 # Количество номеров. 1_000_000 сортируется за несколько секунд.
-NUMBERS_AMOUNT = 10_000_000
+NUMBERS_AMOUNT = 1_000_000_000
 
 
 def generate():
